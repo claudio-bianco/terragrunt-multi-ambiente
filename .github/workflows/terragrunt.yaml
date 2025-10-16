@@ -16,30 +16,34 @@ on:
   workflow_dispatch:
     inputs:
       target_envs:
-        description: "Ambientes: dev,prod (separados por vírgula)"
+        description: "Ambientes (dev,prod ou dev;prod)"
         required: false
-        default: "dev"
+        default: "dev;prod"
 
 env:
-  TERRAFORM_VERSION: '1.9.5'
-  TERRAGRUNT_VERSION: '0.90.0'
-  AWS_REGION: 'us-east-1'
+  TERRAFORM_VERSION: "1.9.5"
+  TERRAGRUNT_VERSION: "0.90.0"
+  AWS_REGION: "us-east-1"
 
 jobs:
   plan:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
-      matrix: { env: [ dev, prod ] }
+      matrix:
+        env: [ "dev", "prod" ]
     permissions:
       id-token: write
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: ${{ env.TERRAFORM_VERSION }} }
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Install Terragrunt
         run: |
@@ -51,7 +55,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_${{ upper(matrix.env) }} }}
+          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', upper(matrix.env))] }}
           role-session-name: tg-plan-${{ matrix.env }}
 
       - name: Provider cache
@@ -64,7 +68,6 @@ jobs:
         run: terragrunt run-all init -input=false -no-color
 
       - name: Terragrunt plan (run-all)
-        id: plan
         working-directory: live/${{ matrix.env }}
         run: |
           terragrunt run-all plan -input=false -no-color | tee plan-${{ matrix.env }}.log
@@ -78,20 +81,21 @@ jobs:
   apply:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: []
+    environment: ${{ matrix.env }}   # Proteja environments dev/prod com aprovação
     strategy:
       matrix:
-        env: ${{ fromJson( (github.event_name == 'workflow_dispatch' && format('["{0}"]', github.event.inputs.target_envs) != '[""]') && '["dummy"]' || '["dev","prod"]' ) }}
-    # ↑ Mantém simples: em push aplica dev e prod; em dispatch você pode ajustar manualmente
-    environment: ${{ matrix.env }}   # use Environments dev/prod com aprovação
+        env: ${{ fromJson( format('["{0}"]', join('","', split( github.event_name == 'workflow_dispatch' && github.event.inputs.target_envs || 'dev;prod', ';'))) ) }}
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: ${{ env.TERRAFORM_VERSION }} }
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Install Terragrunt
         run: |
@@ -102,7 +106,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_${{ upper(matrix.env) }} }}
+          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', upper(matrix.env))] }}
           role-session-name: tg-apply-${{ matrix.env }}
 
       - name: Provider cache
