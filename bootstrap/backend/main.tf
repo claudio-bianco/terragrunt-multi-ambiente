@@ -62,14 +62,20 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
 # Política: obriga HTTPS (SecureTransport)
 data "aws_iam_policy_document" "deny_insecure_transport" {
   statement {
-    sid     = "DenyInsecureTransport"
-    effect  = "Deny"
+    sid    = "DenyInsecureTransport"
+    effect = "Deny"
+
     actions = ["s3:*"]
     resources = [
       aws_s3_bucket.tfstate.arn,
       "${aws_s3_bucket.tfstate.arn}/*",
     ]
-    principals { type = "*"; identifiers = ["*"] }
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
     condition {
       test     = "Bool"
       variable = "aws:SecureTransport"
