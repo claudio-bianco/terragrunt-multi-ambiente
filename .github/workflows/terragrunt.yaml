@@ -44,7 +44,7 @@ jobs:
       id-token: write
       contents: read
       pull-requests: write
-    environment: ${{ matrix.env }}   # carrega os secrets do Environment correspondente
+    environment: ${{ matrix.env }}   # carrega secrets do Environment correspondente
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}   # vem do Environment dev/prod
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}   # secret do Environment (dev/prod)
           role-session-name: tg-plan-${{ matrix.env }}
 
       - name: Provider cache
@@ -87,21 +87,11 @@ jobs:
           name: plan-${{ matrix.env }}
           path: live/${{ matrix.env }}/plan-${{ matrix.env }}.log
 
-  apply:
-    # Em push: roda dev+prod. Em dispatch: respeita as flags run_dev/run_prod.
+  apply_dev:
+    # push sempre roda; no dispatch só roda se run_dev == "true"
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_dev == 'true')
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        env: [ dev, prod ]
-    # Só executa se:
-    # - for push, ou
-    # - for dispatch E a flag do ambiente estiver "true"
-    if: >
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' &&
-       ((matrix.env == 'dev'  && inputs.run_dev  == 'true') ||
-        (matrix.env == 'prod' && inputs.run_prod == 'true')))
-    environment: ${{ matrix.env }}   # exige aprovação e injeta secrets do env
+    environment: dev
     permissions:
       id-token: write
       contents: read
@@ -123,8 +113,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          role-session-name: tg-apply-${{ matrix.env }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # do Environment dev
+          role-session-name: tg-apply-dev
 
       - name: Provider cache
         run: |
@@ -132,9 +122,51 @@ jobs:
           mkdir -p "${{ runner.tool_cache }}/terraform-plugins"
 
       - name: Terragrunt init (run-all)
-        working-directory: live/${{ matrix.env }}
+        working-directory: live/dev
         run: terragrunt run-all init -input=false -no-color
 
       - name: Terragrunt apply (run-all)
-        working-directory: live/${{ matrix.env }}
+        working-directory: live/dev
+        run: terragrunt run-all apply -input=false -auto-approve -no-color
+
+  apply_prod:
+    # push sempre roda; no dispatch só roda se run_prod == "true"
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_prod == 'true')
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Install Terragrunt
+        run: |
+          curl -sSL "https://github.com/gruntwork-io/terragrunt/releases/download/v${TERRAGRUNT_VERSION}/terragrunt_linux_amd64" -o terragrunt
+          install -m 0755 terragrunt /usr/local/bin/terragrunt
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # do Environment prod
+          role-session-name: tg-apply-prod
+
+      - name: Provider cache
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=${{ runner.tool_cache }}/terraform-plugins" >> $GITHUB_ENV
+          mkdir -p "${{ runner.tool_cache }}/terraform-plugins"
+
+      - name: Terragrunt init (run-all)
+        working-directory: live/prod
+        run: terragrunt run-all init -input=false -no-color
+
+      - name: Terragrunt apply (run-all)
+        working-directory: live/prod
         run: terragrunt run-all apply -input=false -auto-approve -no-color
