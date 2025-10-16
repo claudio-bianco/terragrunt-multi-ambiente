@@ -1,3 +1,8 @@
+name: Terragrunt (dev/prod)
+
+on:
+  workflow_dispatch:
+  
 jobs:
   bootstrap_backend:
     if: github.event_name == 'workflow_dispatch'
