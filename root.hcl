@@ -1,14 +1,20 @@
 locals {
   project     = get_env("PROJECT", "acme")
-  aws_region  = get_env("AWS_REGION", "us-east-1")
-  # Descobre a conta automaticamente (ou usa var de ambiente se existir)
-  account_id  = get_env("ACCOUNT_ID", get_aws_account_id())
   # Deriva o ambiente pela estrutura: live/<env>/<stack>/<componente>
   # Ex.: get_original_terragrunt_dir() = .../live/dev/network/vpc
   # dirname(...)                       = .../live/dev/network
   # dirname(dirname(...))              = .../live/dev
   # basename(...)                      = "dev"
   environment = basename(dirname(dirname(get_original_terragrunt_dir())))
+  # Mapa de regiões por ambiente
+  region_map = {
+    dev  = "us-east-1"
+    prod = "us-east-2"
+  }
+  aws_region = try(local.region_map[local.environment], get_env("AWS_REGION", "us-east-1"))
+  # aws_region  = get_env("AWS_REGION", "us-east-1")
+  # Descobre a conta automaticamente (ou usa var de ambiente se existir)
+  account_id  = get_env("ACCOUNT_ID", get_aws_account_id())
 }
 
 remote_state {
