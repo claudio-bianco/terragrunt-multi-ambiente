@@ -1,6 +1,5 @@
-# terragrunt.hcl (raiz)
 locals {
-  project    = "acme"
+  project    = get_env("PROJECT", "acme")
   aws_region = get_env("AWS_REGION", "us-east-1")
 }
 
@@ -10,7 +9,6 @@ remote_state {
     path      = "backend.auto.tf"
     if_exists = "overwrite"
   }
-  # State isolado por ambiente/stack
   config = {
     bucket         = "${local.project}-tfstate-${get_env("ACCOUNT_ID")}-${local.aws_region}"
     key            = "${path_relative_to_include()}/terraform.tfstate"
