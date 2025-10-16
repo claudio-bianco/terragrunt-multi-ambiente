@@ -1,0 +1,33 @@
+jobs:
+  bootstrap_backend:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: dev   # ou um environment "bootstrap"
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.5'
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Criar backend S3 + DynamoDB
+        working-directory: bootstrap/backend
+        env:
+          PROJECT: ${{ vars.PROJECT || 'acme' }}
+          ACCOUNT_ID: ${{ vars.ACCOUNT_ID }} # defina como org/repo variable
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          terraform init
+          terraform apply -auto-approve \
+            -var="project=$PROJECT" \
+            -var="account_id=$ACCOUNT_ID" \
+            -var="region=$AWS_REGION"
