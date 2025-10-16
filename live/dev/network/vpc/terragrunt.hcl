@@ -1,3 +1,7 @@
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
+
 locals {
   repo_root = get_repo_root() # raiz do git repo
 }
