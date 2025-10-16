@@ -3,5 +3,6 @@ terraform {
 }
 
 inputs = {
-  cidr_block = "10.20.0.0/16" # dev (mude no prod)
+  env        = "prod"
+  cidr_block = "10.20.0.0/16"
 }
