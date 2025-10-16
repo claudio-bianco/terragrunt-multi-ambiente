@@ -3,8 +3,12 @@ locals {
   aws_region  = get_env("AWS_REGION", "us-east-1")
   # Descobre a conta automaticamente (ou usa var de ambiente se existir)
   account_id  = get_env("ACCOUNT_ID", get_aws_account_id())
-  # tenta descobrir o ambiente a partir da variável de input ou da estrutura do path
-  environment = try(local.env, basename(dirname(get_terragrunt_dir())))
+  # Deriva o ambiente pela estrutura: live/<env>/<stack>/<componente>
+  # Ex.: get_original_terragrunt_dir() = .../live/dev/network/vpc
+  # dirname(...)                       = .../live/dev/network
+  # dirname(dirname(...))              = .../live/dev
+  # basename(...)                      = "dev"
+  environment = basename(dirname(dirname(get_original_terragrunt_dir())))
 }
 
 remote_state {
