@@ -1,5 +1,5 @@
 include "root" {
-  path = find_in_parent_folders()  # sobe até o terragrunt.hcl da raiz do repo
+  path = find_in_parent_folders("root.hcl")
 }
 
 locals { env = "dev" }
