@@ -82,7 +82,7 @@ jobs:
           export TERRAGRUNT_NON_INTERACTIVE=true
           export TF_INPUT=false
           export TF_CLI_ARGS="-no-color"
-          terragrunt run --all plan -- -no-color | tee plan-${{ matrix.env }}.log
+          terragrunt run --all plan --exclude-dir . -- -no-color | tee plan-${{ matrix.env }}.log
 
       - name: Artefatos do plan
         uses: actions/upload-artifact@v4
@@ -134,7 +134,7 @@ jobs:
           export TERRAGRUNT_NON_INTERACTIVE=true
           export TF_INPUT=false
           export TF_CLI_ARGS="-no-color"
-          terragrunt run --all apply -- -auto-approve -no-color
+          terragrunt run --all apply --exclude-dir . -- -auto-approve -no-color
 
   apply_prod:
     # push sempre roda; no dispatch só roda se run_prod == "true"
@@ -180,4 +180,4 @@ jobs:
           export TERRAGRUNT_NON_INTERACTIVE=true
           export TF_INPUT=false
           export TF_CLI_ARGS="-no-color"
-          terragrunt run --all apply -- -auto-approve -no-color
+          terragrunt run --all apply --exclude-dir . -- -auto-approve -no-color
