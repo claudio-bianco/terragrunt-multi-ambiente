@@ -1,4 +1,4 @@
-name: Terragrunt (dev/prod)
+name: Bootstrap (dev/prod)
 
 on:
   workflow_dispatch:
