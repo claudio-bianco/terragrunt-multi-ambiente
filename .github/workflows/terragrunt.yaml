@@ -15,10 +15,18 @@ on:
       - 'terragrunt.hcl'
   workflow_dispatch:
     inputs:
-      target_envs:
-        description: "Ambientes (dev,prod ou dev;prod)"
-        required: false
-        default: "dev;prod"
+      run_dev:
+        description: "Rodar dev?"
+        required: true
+        default: "true"
+        type: choice
+        options: [ "true", "false" ]
+      run_prod:
+        description: "Rodar prod?"
+        required: true
+        default: "false"
+        type: choice
+        options: [ "true", "false" ]
 
 env:
   TERRAFORM_VERSION: "1.9.5"
@@ -31,11 +39,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        env: [ "dev", "prod" ]
+        env: [ dev, prod ]
     permissions:
       id-token: write
       contents: read
       pull-requests: write
+    environment: ${{ matrix.env }}   # carrega os secrets do Environment correspondente
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,7 +64,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', upper(matrix.env))] }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}   # vem do Environment dev/prod
           role-session-name: tg-plan-${{ matrix.env }}
 
       - name: Provider cache
@@ -79,12 +88,20 @@ jobs:
           path: live/${{ matrix.env }}/plan-${{ matrix.env }}.log
 
   apply:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Em push: roda dev+prod. Em dispatch: respeita as flags run_dev/run_prod.
     runs-on: ubuntu-latest
-    environment: ${{ matrix.env }}   # Proteja environments dev/prod com aprovação
     strategy:
       matrix:
-        env: ${{ fromJson( format('["{0}"]', join('","', split( github.event_name == 'workflow_dispatch' && github.event.inputs.target_envs || 'dev;prod', ';'))) ) }}
+        env: [ dev, prod ]
+    # Só executa se:
+    # - for push, ou
+    # - for dispatch E a flag do ambiente estiver "true"
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+       ((matrix.env == 'dev'  && inputs.run_dev  == 'true') ||
+        (matrix.env == 'prod' && inputs.run_prod == 'true')))
+    environment: ${{ matrix.env }}   # exige aprovação e injeta secrets do env
     permissions:
       id-token: write
       contents: read
@@ -106,7 +123,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', upper(matrix.env))] }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           role-session-name: tg-apply-${{ matrix.env }}
 
       - name: Provider cache
