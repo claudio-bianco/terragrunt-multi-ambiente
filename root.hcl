@@ -1,6 +1,8 @@
 locals {
-  project    = get_env("PROJECT", "acme")
-  aws_region = get_env("AWS_REGION", "us-east-1")
+  project     = get_env("PROJECT", "acme")
+  aws_region  = get_env("AWS_REGION", "us-east-1")
+  # Descobre a conta automaticamente (ou usa var de ambiente se existir)
+  account_id  = get_env("ACCOUNT_ID", get_aws_account_id())
 }
 
 remote_state {
@@ -10,10 +12,10 @@ remote_state {
     if_exists = "overwrite"
   }
   config = {
-    bucket         = "${local.project}-tfstate-${get_env("ACCOUNT_ID")}-${local.aws_region}"
+    bucket         = "${local.project}-tfstate-${local.account_id}-${local.aws_region}"
     key            = "${path_relative_to_include()}/terraform.tfstate"
     region         = local.aws_region
-    dynamodb_table = "${local.project}-tf-locks-${get_env("ACCOUNT_ID")}-${local.aws_region}"
+    dynamodb_table = "${local.project}-tf-locks-${local.account_id}-${local.aws_region}"
     encrypt        = true
   }
 }
