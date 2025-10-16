@@ -74,12 +74,12 @@ jobs:
 
       - name: Terragrunt init (run-all)
         working-directory: live/${{ matrix.env }}
-        run: terragrunt run-all init --terragrunt-non-interactive -- -input=false -no-color
+        run: terragrunt run-all init -- -input=false -no-color
 
       - name: Terragrunt plan (run-all)
         working-directory: live/${{ matrix.env }}
         run: |
-          terragrunt run-all plan --terragrunt-non-interactive -- -input=false -no-color | tee plan-${{ matrix.env }}.log
+          terragrunt run-all plan -- -input=false -no-color | tee plan-${{ matrix.env }}.log
 
       - name: Artefatos do plan
         uses: actions/upload-artifact@v4
@@ -123,11 +123,11 @@ jobs:
 
       - name: Terragrunt init (run-all)
         working-directory: live/dev
-        run: terragrunt run-all init --terragrunt-non-interactive -- -input=false -no-color
+        run: terragrunt run-all init -- -input=false -no-color
 
       - name: Terragrunt apply (run-all)
         working-directory: live/dev
-        run: terragrunt run-all apply --terragrunt-non-interactive -- -input=false -auto-approve -no-color
+        run: terragrunt run-all apply -- -input=false -auto-approve -no-color
 
   apply_prod:
     # push sempre roda; no dispatch só roda se run_prod == "true"
@@ -165,8 +165,8 @@ jobs:
 
       - name: Terragrunt init (run-all)
         working-directory: live/prod
-        run: terragrunt run-all init --terragrunt-non-interactive -- -input=false -no-color
+        run: terragrunt run-all init -- -input=false -no-color
 
       - name: Terragrunt apply (run-all)
         working-directory: live/prod
-        run: terragrunt run-all apply --terragrunt-non-interactive -- -input=false -auto-approve -no-color
+        run: terragrunt run-all apply -- -input=false -auto-approve -no-color
