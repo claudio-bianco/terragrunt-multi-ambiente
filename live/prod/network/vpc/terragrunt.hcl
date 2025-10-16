@@ -8,5 +8,6 @@ terraform {
 }
 
 inputs = {
-  cidr_block = "10.20.0.0/16" # exemplo para dev
+  cidr_block = "10.20.0.0/16"
+  environment = "prod"
 }
