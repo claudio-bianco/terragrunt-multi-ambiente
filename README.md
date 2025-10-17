@@ -31,7 +31,7 @@ Este projeto demonstra uma **infraestrutura multi-ambiente (Dev e Prod)** provis
 │   └── workflows/
 │       └── terragrunt.yaml   # Pipeline CI/CD com input de região
 └── README.md
-
+```
 * * *
 
 ## ⚙️ Terragrunt: Configuração Global (`root.hcl`)
@@ -45,7 +45,7 @@ O `root.hcl` define:
 * O **gerenciamento de locks e versionamento do state**
     
 
-```
+```hcl
 locals {
   project     = get_env("PROJECT", "acme")
   environment = basename(dirname(dirname(get_original_terragrunt_dir())))
