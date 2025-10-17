@@ -282,52 +282,39 @@ Este diagrama mostra o fluxo completo entre o **GitHub Actions (com OIDC)** e a 
 - O **GitHub Actions** assume roles IAM diferentes para cada ambiente via **OIDC**, sem precisar de chaves fixas.
 
 ```mermaid
-flowchart LR
-  %% Estilos simples e compatíveis
-  classDef aws fill:#fef9c3,stroke:#d4a373,stroke-width:1px,color:#3f3f46;
-  classDef gh  fill:#e0f2fe,stroke:#0ea5e9,stroke-width:1px,color:#082f49;
-  classDef tg  fill:#ecfccb,stroke:#84cc16,stroke-width:1px,color:#365314;
-
-  %% GitHub Actions
-  A[GitHub Actions\nworkflow_dispatch\nregion = us-east-1 ou us-east-2]:::gh
-  B[OIDC Provider\ntoken.actions.githubusercontent.com]:::gh
+flowchart TD
+  A[GitHub Actions<br/>workflow_dispatch<br/>region us-east-1 ou us-east-2]
+  B[OIDC Provider<br/>token.actions.githubusercontent.com]
   A --> B
 
-  %% IAM Roles por environment
-  R1[Role IAM DEV\nEnv: dev (us-east-1)\nSecret: AWS_ROLE_ARN]:::aws
-  R2[Role IAM PROD\nEnv: prod (us-east-2)\nSecret: AWS_ROLE_ARN]:::aws
+  R1[Role IAM DEV<br/>Env dev us-east-1<br/>Secret AWS_ROLE_ARN]
+  R2[Role IAM PROD<br/>Env prod us-east-2<br/>Secret AWS_ROLE_ARN]
   B --> R1
   B --> R2
 
-  %% Terragrunt
-  TG[Terragrunt CLI (run --all)\nroot.hcl detecta ambiente e região\nprovider.auto.tf gerado dinamicamente]:::tg
+  TG[Terragrunt CLI<br/>root.hcl detecta ambiente e regiao<br/>provider.auto.tf gerado]
   A --> TG
 
-  %% DEV
-  subgraph DEV [Ambiente DEV - us-east-1]
-    direction TB
-    S3D[(S3 Bucket\nacme-tfstate-<account>-us-east-1)]:::aws
-    DDBD[(DynamoDB\nacme-tf-locks-<account>-us-east-1)]:::aws
-    VPCD[Stack: live/dev/network/vpc]:::tg
+  subgraph DEV_Ambiente_us_east_1
+    S3D[S3 Bucket<br/>acme-tfstate acct us-east-1]
+    DDBD[DynamoDB<br/>acme-tf-locks acct us-east-1]
+    VPCD[Stack<br/>live/dev/network/vpc]
     TG --> S3D
     TG --> DDBD
     TG --> VPCD
-    VPCD --> AWSDEV[AWS Resources\nVPC DEV]:::aws
+    VPCD --> AWSDEV[AWS Resources<br/>VPC DEV]
   end
 
-  %% PROD
-  subgraph PROD [Ambiente PROD - us-east-2]
-    direction TB
-    S3P[(S3 Bucket\nacme-tfstate-<account>-us-east-2)]:::aws
-    DDBP[(DynamoDB\nacme-tf-locks-<account>-us-east-2)]:::aws
-    VPCP[Stack: live/prod/network/vpc]:::tg
+  subgraph PROD_Ambiente_us_east_2
+    S3P[S3 Bucket<br/>acme-tfstate acct us-east-2]
+    DDBP[DynamoDB<br/>acme-tf-locks acct us-east-2]
+    VPCP[Stack<br/>live/prod/network/vpc]
     TG --> S3P
     TG --> DDBP
     TG --> VPCP
-    VPCP --> AWSPRD[AWS Resources\nVPC PROD]:::aws
+    VPCP --> AWSPRD[AWS Resources<br/>VPC PROD]
   end
 
-  %% Ligações de permissão (sem rótulos para evitar erro)
   R1 --> S3D
   R1 --> DDBD
   R2 --> S3P
