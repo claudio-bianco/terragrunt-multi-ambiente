@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       region:
-        description: "Região (us-east-1=dev, us-east-2=prod)"
+        description: "Região(us-east-1=dev, us-east-2=prod)"
         required: true
         type: choice
         options: [ "us-east-1", "us-east-2" ]
