@@ -2,11 +2,18 @@ name: Bootstrap (dev/prod)
 
 on:
   workflow_dispatch:
+    inputs:
+      region:
+        description: "Região alvo (us-east-1=dev, us-east-2=prod)"
+        required: true
+        type: choice
+        options: [ "us-east-1", "us-east-2" ]
+        default: "us-east-1"
 
 env:
   TERRAFORM_VERSION: "1.9.5"
   TERRAGRUNT_VERSION: "0.90.0"
-  AWS_REGION: "us-east-2"
+  AWS_REGION: ${{ inputs.region }}
   
 jobs:
   bootstrap_backend:
