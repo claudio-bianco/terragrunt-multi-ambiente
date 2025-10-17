@@ -275,11 +275,11 @@ terragrunt run apply -- -auto-approve
 
 ## 🗺️ Diagrama de Arquitetura
 
-Este diagrama mostra o fluxo completo da automação entre o **GitHub Actions (com OIDC)** e a **AWS**, onde:
-- a seleção da região no input (`us-east-1` ou `us-east-2`) define automaticamente o ambiente (`dev` ou `prod`);
-- o **Terragrunt** identifica o ambiente, gera o `backend.auto.tf` e o `provider.auto.tf`;
-- o **tfstate** é armazenado em buckets S3 distintos por região, com bloqueio no DynamoDB;
-- o **GitHub Actions** assume a role IAM usando autenticação **OIDC**, sem precisar de chaves de acesso fixas.
+Este diagrama mostra o fluxo completo entre o **GitHub Actions (com OIDC)** e a **AWS**, onde:
+- A seleção da região no input (`us-east-1` ou `us-east-2`) define automaticamente o ambiente (`dev` ou `prod`);
+- O **Terragrunt** detecta o ambiente e gera dinamicamente os arquivos `backend.auto.tf` e `provider.auto.tf`;
+- O **tfstate** é salvo em **buckets S3** distintos e com bloqueio de concorrência em **DynamoDB**;
+- O **GitHub Actions** assume roles IAM diferentes para cada ambiente via **OIDC**, sem precisar de chaves fixas.
 
 ```mermaid
 flowchart LR
@@ -289,12 +289,12 @@ flowchart LR
   classDef tg  fill:#ecfccb,stroke:#84cc16,stroke-width:1px,color:#365314;
 
   %% === GITHUB ACTIONS ===
-  A[GitHub Actions\nworkflow_dispatch:\nregion = us-east-1 | us-east-2]:::gh
+  A[GitHub Actions\nworkflow_dispatch:\nregion = us-east-1 ou us-east-2]:::gh
   A -->|OIDC Federation| B[OIDC Provider\n(token.actions.githubusercontent.com)]:::gh
 
   %% === IAM ROLES ===
-  B -->|AssumeRole (dev)| R1[Role IAM DEV\nEnv: dev (us-east-1)\nsecret: AWS_ROLE_ARN]:::aws
-  B -->|AssumeRole (prod)| R2[Role IAM PROD\nEnv: prod (us-east-2)\nsecret: AWS_ROLE_ARN]:::aws
+  B -->|AssumeRole (dev)| R1[Role IAM DEV\nEnv: dev (us-east-1)\nSecret: AWS_ROLE_ARN]:::aws
+  B -->|AssumeRole (prod)| R2[Role IAM PROD\nEnv: prod (us-east-2)\nSecret: AWS_ROLE_ARN]:::aws
 
   %% === TERRAGRUNT ===
   A --> TG[Terragrunt CLI (run --all)\nroot.hcl detecta ambiente e região\nprovider.auto.tf gerado dinamicamente]:::tg
