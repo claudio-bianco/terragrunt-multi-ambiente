@@ -6,7 +6,7 @@ on:
 env:
   TERRAFORM_VERSION: "1.9.5"
   TERRAGRUNT_VERSION: "0.90.0"
-  AWS_REGION: "us-east-1"
+  AWS_REGION: "us-east-2"
   
 jobs:
   bootstrap_backend:
