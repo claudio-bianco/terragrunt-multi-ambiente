@@ -4,6 +4,55 @@ Este projeto demonstra uma **infraestrutura multi-ambiente (Dev e Prod)** provis
 
 ---
 
+## 🗺️ Diagrama de Arquitetura
+
+Este diagrama mostra o fluxo completo entre o **GitHub Actions (com OIDC)** e a **AWS**, onde:
+- A seleção da região no input (`us-east-1` ou `us-east-2`) define automaticamente o ambiente (`dev` ou `prod`);
+- O **Terragrunt** detecta o ambiente e gera dinamicamente os arquivos `backend.auto.tf` e `provider.auto.tf`;
+- O **tfstate** é salvo em **buckets S3** distintos e com bloqueio de concorrência em **DynamoDB**;
+- O **GitHub Actions** assume roles IAM diferentes para cada ambiente via **OIDC**, sem precisar de chaves fixas.
+
+```mermaid
+flowchart TD
+  A[GitHub Actions<br/>workflow_dispatch<br/>region us-east-1 ou us-east-2]
+  B[OIDC Provider<br/>token.actions.githubusercontent.com]
+  A --> B
+
+  R1[Role IAM DEV<br/>Env dev us-east-1<br/>Secret AWS_ROLE_ARN]
+  R2[Role IAM PROD<br/>Env prod us-east-2<br/>Secret AWS_ROLE_ARN]
+  B --> R1
+  B --> R2
+
+  TG[Terragrunt CLI<br/>root.hcl detecta ambiente e regiao<br/>provider.auto.tf gerado]
+  A --> TG
+
+  subgraph DEV_Ambiente_us_east_1
+    S3D[S3 Bucket<br/>acme-tfstate acct us-east-1]
+    DDBD[DynamoDB<br/>acme-tf-locks acct us-east-1]
+    VPCD[Stack<br/>live/dev/network/vpc]
+    TG --> S3D
+    TG --> DDBD
+    TG --> VPCD
+    VPCD --> AWSDEV[AWS Resources<br/>VPC DEV]
+  end
+
+  subgraph PROD_Ambiente_us_east_2
+    S3P[S3 Bucket<br/>acme-tfstate acct us-east-2]
+    DDBP[DynamoDB<br/>acme-tf-locks acct us-east-2]
+    VPCP[Stack<br/>live/prod/network/vpc]
+    TG --> S3P
+    TG --> DDBP
+    TG --> VPCP
+    VPCP --> AWSPRD[AWS Resources<br/>VPC PROD]
+  end
+
+  R1 --> S3D
+  R1 --> DDBD
+  R2 --> S3P
+  R2 --> DDBP
+```
+---
+
 ## 🧱 Estrutura de Diretórios
 
 ```bash
@@ -272,50 +321,3 @@ terragrunt run apply -- -auto-approve
 * * *
 
 > 🧠 _“Automatizar é multiplicar o tempo — cada deploy sem intervenção humana é uma vitória da engenharia.”_
-
-## 🗺️ Diagrama de Arquitetura
-
-Este diagrama mostra o fluxo completo entre o **GitHub Actions (com OIDC)** e a **AWS**, onde:
-- A seleção da região no input (`us-east-1` ou `us-east-2`) define automaticamente o ambiente (`dev` ou `prod`);
-- O **Terragrunt** detecta o ambiente e gera dinamicamente os arquivos `backend.auto.tf` e `provider.auto.tf`;
-- O **tfstate** é salvo em **buckets S3** distintos e com bloqueio de concorrência em **DynamoDB**;
-- O **GitHub Actions** assume roles IAM diferentes para cada ambiente via **OIDC**, sem precisar de chaves fixas.
-
-```mermaid
-flowchart TD
-  A[GitHub Actions<br/>workflow_dispatch<br/>region us-east-1 ou us-east-2]
-  B[OIDC Provider<br/>token.actions.githubusercontent.com]
-  A --> B
-
-  R1[Role IAM DEV<br/>Env dev us-east-1<br/>Secret AWS_ROLE_ARN]
-  R2[Role IAM PROD<br/>Env prod us-east-2<br/>Secret AWS_ROLE_ARN]
-  B --> R1
-  B --> R2
-
-  TG[Terragrunt CLI<br/>root.hcl detecta ambiente e regiao<br/>provider.auto.tf gerado]
-  A --> TG
-
-  subgraph DEV_Ambiente_us_east_1
-    S3D[S3 Bucket<br/>acme-tfstate acct us-east-1]
-    DDBD[DynamoDB<br/>acme-tf-locks acct us-east-1]
-    VPCD[Stack<br/>live/dev/network/vpc]
-    TG --> S3D
-    TG --> DDBD
-    TG --> VPCD
-    VPCD --> AWSDEV[AWS Resources<br/>VPC DEV]
-  end
-
-  subgraph PROD_Ambiente_us_east_2
-    S3P[S3 Bucket<br/>acme-tfstate acct us-east-2]
-    DDBP[DynamoDB<br/>acme-tf-locks acct us-east-2]
-    VPCP[Stack<br/>live/prod/network/vpc]
-    TG --> S3P
-    TG --> DDBP
-    TG --> VPCP
-    VPCP --> AWSPRD[AWS Resources<br/>VPC PROD]
-  end
-
-  R1 --> S3D
-  R1 --> DDBD
-  R2 --> S3P
-  R2 --> DDBP
