@@ -45,7 +45,7 @@ O `root.hcl` define:
 * O **gerenciamento de locks e versionamento do state**
     
 
-```hcl
+```
 locals {
   project     = get_env("PROJECT", "acme")
   environment = basename(dirname(dirname(get_original_terragrunt_dir())))
