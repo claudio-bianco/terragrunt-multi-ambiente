@@ -272,3 +272,53 @@ terragrunt run apply -- -auto-approve
 * * *
 
 > 🧠 _“Automatizar é multiplicar o tempo — cada deploy sem intervenção humana é uma vitória da engenharia.”_
+
+## 🗺️ Diagrama de Arquitetura
+
+> Seleção via input único de região: `us-east-1` → **dev**, `us-east-2` → **prod**.
+
+<!-- Mermaid -->
+flowchart LR
+  %% Estilo
+  classDef aws fill:#fef9c3,stroke:#d4a373,stroke-width:1px,color:#3f3f46;
+  classDef gh  fill:#e0f2fe,stroke:#0ea5e9,stroke-width:1px,color:#082f49;
+  classDef tg  fill:#ecfccb,stroke:#84cc16,stroke-width:1px,color:#365314;
+
+  %% GitHub
+  A[GitHub Actions\nworkflow_dispatch: region = us-east-1 | us-east-2]:::gh
+  A -->|OIDC| B[OIDC Provider\n(token.actions.githubusercontent.com)]:::gh
+
+  %% Roles por environment
+  B -->|AssumeRole (dev)| R1[Role IAM DEV\nSecrets: AWS_ROLE_ARN (Env: dev)]:::aws
+  B -->|AssumeRole (prod)| R2[Role IAM PROD\nSecrets: AWS_ROLE_ARN (Env: prod)]:::aws
+
+  %% Terragrunt
+  A --> TG[Terragrunt CLI (run --all)\nroot.hcl: environment → região\nprovider.auto.tf por componente]:::tg
+
+  %% Dev stack
+  subgraph DEV (us-east-1)
+    direction TB
+    S3D[(S3 Bucket\nacme-tfstate-<acct>-us-east-1)]:::aws
+    DDBD[(DynamoDB\nacme-tf-locks-<acct>-us-east-1)]:::aws
+    VPCD[Stack: live/dev/network/vpc]:::tg
+    TG -->|backend.auto.tf\nkey: states/dev/terraform.tfstate| S3D
+    TG -->|state lock| DDBD
+    R1 -->|Permissões S3/DDB| S3D
+    R1 --> DDBD
+    TG -->|provider: us-east-1| VPCD
+    VPCD -->|create/update| AWSDEV[AWS Resources (VPC DEV)]:::aws
+  end
+
+  %% Prod stack
+  subgraph PROD (us-east-2)
+    direction TB
+    S3P[(S3 Bucket\nacme-tfstate-<acct>-us-east-2)]:::aws
+    DDBP[(DynamoDB\nacme-tf-locks-<acct>-us-east-2)]:::aws
+    VPCP[Stack: live/prod/network/vpc]:::tg
+    TG -->|backend.auto.tf\nkey: states/prod/terraform.tfstate| S3P
+    TG -->|state lock| DDBP
+    R2 -->|Permissões S3/DDB| S3P
+    R2 --> DDBP
+    TG -->|provider: us-east-2| VPCP
+    VPCP -->|create/update| AWSPRD[AWS Resources (VPC PROD)]:::aws
+  end
